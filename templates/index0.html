@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>双屏模板启动页</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+        }
+
+body{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    min-height:100vh;
+    margin:0;
+
+ font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+
+    background:
+        radial-gradient(circle at center,
+            rgba(255,255,255,0) 25%,
+            rgba(255,246,214,.45) 60%,
+            rgba(255,236,184,.82) 100%),
+        url("/static/xixibackground.png");
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+}
+*{
+    font-family: inherit;
+}
+
+        .launcher {
+            display: grid;
+            width: min(92vw, 520px);
+            gap: 20px;
+            justify-items: center;
+            text-align: center;
+        }
+
+        .logo {
+            width: 160px;
+            height: auto;
+            margin-top: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            color: #5b4b2d;
+            font-size: 1.75rem;
+            letter-spacing: 0;
+        }
+
+        p {
+            margin: 0;
+            color: rgba(91, 75, 45, 0.72);
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        .launch-button {
+            min-height: 54px;
+            padding: 0 28px;
+            border: 0;
+            border-radius: 999px;
+            color: #1d1530;
+            background: linear-gradient(180deg, #ffeda7 0%, #e5c061 100%);
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+        }
+
+        .launch-button:focus-visible {
+            outline: 2px solid #fff8e8;
+            outline-offset: 4px;
+        }
+
+        .status {
+            min-height: 24px;
+            color: #777;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+<main class="launcher">
+    <img class="logo" src="./static/logo_black.svg" alt="公司 Logo"/>
+    <h1>欢迎来到厨神曦的神奇小厨房！</h1>
+    <button class="launch-button" type="button" data-launch>启动双屏界面</button>
+    <div class="status" data-status aria-live="polite"></div>
+</main>
+
+<script>
+    (() => {
+        const templateAUrl = "/main";
+        const templateBUrl = "/display";
+        const launchButton = document.querySelector("[data-launch]");
+        const statusNode = document.querySelector("[data-status]");
+
+        let launched = false;
+        console.log(window.getScreenDetails());
+
+
+        const setStatus = (message) => {
+            if (statusNode) {
+                statusNode.textContent = message;
+            }
+        };
+
+        const getSecondaryWindowFeatures = async () => {
+            const fallbackWidth = Math.max(1280, window.screen?.availWidth || 1280);
+            const fallbackHeight = Math.max(720, window.screen?.availHeight || 720);
+            let targetScreen = null;
+
+            try {
+                if ("getScreenDetails" in window && window.isSecureContext) {
+                    const details = await window.getScreenDetails();
+                    targetScreen =
+                        details.screens.find((screen) => !screen.isPrimary) ||
+                        details.screens.find((screen) => screen !== details.currentScreen) ||
+                        null;
+                }
+            } catch (error) {
+                targetScreen = null;
+            }
+
+            if (targetScreen) {
+                return {
+                    left: targetScreen.availLeft,
+                    top: targetScreen.availTop,
+                    width: targetScreen.availWidth,
+                    height: targetScreen.availHeight,
+                };
+            }
+
+            return {
+                left: (window.screen?.availLeft || 0) + (window.screen?.availWidth || fallbackWidth),
+                top: window.screen?.availTop || 0,
+                width: fallbackWidth,
+                height: fallbackHeight,
+            };
+        };
+
+        const openTemplateB = async () => {
+            const features = await getSecondaryWindowFeatures();
+            const featureText = [
+                "popup=yes",
+                "noopener=no",
+                "noreferrer=no",
+                `left=${Math.round(features.left)}`,
+                `top=${Math.round(features.top)}`,
+                `width=${Math.round(features.width)}`,
+                `height=${Math.round(features.height)}`
+            ].join(",");
+            const secondaryWindow = window.open(templateBUrl, "template_B_secondary", featureText);
+
+            if (!secondaryWindow) {
+                return false;
+            }
+
+            try {
+                secondaryWindow.moveTo(features.left, features.top);
+                secondaryWindow.resizeTo(features.width, features.height);
+                secondaryWindow.focus();
+                window.focus();
+            } catch (error) {
+                // Some browsers ignore cross-screen window placement without permission.
+            }
+
+            return true;
+        };
+
+        const launchScreens = async ({userInitiated = false} = {}) => {
+            if (launched) return;
+            launched = true;
+            launchButton.disabled = true;
+            setStatus("正在打开 B 屏窗口...");
+
+            const opened = await openTemplateB();
+
+            if (!opened) {
+                launched = false;
+                launchButton.disabled = false;
+                setStatus(userInitiated ? "浏览器仍然拦截了弹窗，请检查弹窗权限。" : "自动弹窗被浏览器拦截，请点击按钮启动。");
+                return;
+            }
+
+            setStatus("B 屏已打开，正在进入 A 屏...");
+
+              window.setTimeout(() => {
+                window.location.replace(templateAUrl);
+              }, 180);
+            };
+
+            launchButton.addEventListener("click", () => {
+                launchScreens({userInitiated: true});
+            });
+
+            window.addEventListener("DOMContentLoaded", () => {
+                window.setTimeout(() => {
+                    launchScreens();
+                }, 120);
+            });
+        }
+    )
+        ();
+</script>
+</body>
+</html>

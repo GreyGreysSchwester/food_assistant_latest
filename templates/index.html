@@ -1,0 +1,2788 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>厨神曦饮食助手</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="/static/echarts.min.js"></script>
+<script src="/static/helpers.js"></script>
+<script src="/static/voiceAgent.js"></script>
+<script src="/static/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<style>
+body{
+    position: relative;
+    min-height: 97vh;
+    overflow-x: hidden;
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+
+}
+*{
+    font-family: inherit;
+}
+body::before{
+    content:'';
+    position: absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background-image:url('/static/catcook.png');
+    background-size:cover;
+    background-position:center;
+    opacity:0.5;
+    z-index:-1;
+    pointer-events:none;
+}
+
+.header{
+    text-align:center;
+    padding:20px;
+    background:#fff1d16e;
+}
+
+.container{
+    flex:1;
+    width:70%;
+    max-width:none;
+
+
+    margin:10px auto;
+
+    background:#ffffffd9;
+    border-radius:20px;
+    box-sizing:border-box;
+    padding:40px;
+
+    box-shadow:
+        0 5px 15px rgba(0,0,0,.1);
+        
+}
+
+.page{
+    display:none;
+}
+
+.page.active{
+    display:block;
+    text-align: center;
+}
+
+.option{
+    display:block;
+    margin:12px 0;
+    padding:12px;
+
+    border:1px solid #ddd;
+    border-radius:12px;
+
+    cursor:pointer;
+    text-align: left;
+    padding-left: 20px;
+    font-size: 18px;
+    color: #454545;
+}
+
+input[type=text]{
+    width:100%;
+    padding:12px;
+
+    border-radius:10px;
+    border:1px solid #ddd;
+}
+
+button{
+    margin-top:20px;
+
+    padding:12px 24px;
+
+    border:none;
+    border-radius:12px;
+
+    background:#ffde8b;
+    color:rgb(255, 255, 255);
+    font-size:16px;
+
+    cursor:pointer;
+}
+button:hover{
+    transform:scale(1.05);
+}
+button:active{
+    transform:scale(0.95);
+}
+
+.result-box{
+    background:#fafafa;
+    padding:15px;
+    border-radius:12px;
+    line-height:1.8;
+}
+
+.thinking-box{
+    font: size 18px;
+    color:#ff6b9d;
+    text-align:center;
+    padding:20px;
+    animation:dots 1.2s infinite;
+}
+@keyframes dots{
+    0%{content:'';}
+    50%{content:'.';}
+    100%{content:'...';}
+}
+
+#nutritionChart{
+    width:100%;
+    height:420px;
+    background:#fff;
+    border-radius:20px;
+    margin-bottom:20px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+#nutritionCompareChart{
+    width:100%;
+    height:450px;
+    background:#fff;
+    border-radius:20px;
+    margin-bottom:20px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+.tip-text{
+    font-size:14px;
+    color:#888;
+    font-style:italic;
+    text-align:center;
+    margin-top:10px;
+}
+
+/* 蔬菜区域 */
+#veggie-world{
+    position:fixed;
+    bottom:0;
+    left:0;
+
+    width:100%;
+    height:203px;
+
+    overflow:hidden;
+
+    pointer-events:none;
+
+    z-index:5;
+}
+
+/* 单个蔬菜 */
+.veggie{
+    position:absolute;
+    font-size:40px;
+    user-select:none;
+}
+
+/* 摇一摇按钮 */
+#shakeBtn{
+    position: absolute;
+
+    right:20px;
+    bottom:40px;
+
+    z-index:999;
+
+    border:none;
+
+    padding:12px 12px;
+
+    border-radius:50px;
+
+    cursor:pointer;
+
+    background:#fff1d16e;
+    color:white;
+    font-size:33px;
+}
+
+/* 包裹容器 */
+.shake-wrapper{
+    position:fixed;
+    right:30px;
+    bottom:30px;
+    z-index:9999;
+}
+
+/* 提示文字 */
+.shake-tip{
+    position:absolute;
+
+    right:85px;
+    top:50%;
+
+    transform:
+        translateY(-50%)
+        translateX(10px);
+
+    white-space:nowrap;
+
+    background:rgba(50,50,50,0.9);
+
+    color:white;
+
+    padding:8px 12px;
+
+    border-radius:12px;
+
+    font-size:14px;
+
+    opacity:0;
+
+    pointer-events:none;
+
+    transition:all .3s ease;
+}
+
+/* 小三角 */
+.shake-tip::after{
+    content:"";
+
+    position:absolute;
+
+    right:-6px;
+    top:50%;
+
+    transform:translateY(-50%);
+
+    border-left:6px solid rgba(50,50,50,0.9);
+    border-top:6px solid transparent;
+    border-bottom:6px solid transparent;
+}
+
+/* 鼠标悬停显示 */
+.shake-wrapper:hover .shake-tip{
+
+    opacity:1;
+
+    transform:
+        translateY(-50%)
+        translateX(0);
+}
+
+.welcome-page{
+    text-align: center;
+    padding:20px;
+    background:#fff1d183;
+    border-radius:24px;
+    line-height:1.8;
+    color:#000;
+    font-size:16px;
+    margin-bottom:20px;
+    
+}
+
+#recipeloading{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+#thinkingVideo{
+    display: block;
+    margin:0 auto ;
+
+}
+#recipeLoading p{
+    margin-top: 10px;
+    font-size: 20px;
+    color:#212121;
+    text-align: center;
+}
+#nutritionLoading{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+#nutritionLoading p{
+    margin-top: 10px;
+    font-size: 20px;
+    color:#212121;
+    text-align: center;
+}
+
+
+#saveCardBtn{
+    display: none;
+
+    margin-top:20px;
+
+    padding:15px 30px;
+
+    border:none;
+
+    border-radius:25px;
+
+    cursor:pointer;
+
+    font-size:18px;
+
+    background:#ffde8b;
+
+    color:white;
+
+    transition:.3s;
+}
+
+#saveCardBtn:hover{
+
+    transform:scale(1.05);
+}
+
+
+#shareCard{
+
+    position:fixed;
+
+    left:-9999px;
+
+    top:0;
+
+    width:650px;
+
+    padding:30px;
+
+    background:white;
+
+    border-radius:20px;
+
+    font-family:'Microsoft YaHei';
+
+    box-shadow:0 5px 20px rgba(0,0,0,.15);
+}
+
+#shareCard > h2{
+
+    text-align:center;
+
+    color:#4CAF50;
+}
+
+#shareCard h3{
+
+    text-align:left;
+    font-size:20px;
+    color:black;
+}
+#shareCard hr{
+    border:none;
+    height:2px;
+    background:linear-gradient(to right, transparent, #ffcc66, transparent);
+    margin:25px 0;
+}
+
+.section-card{
+
+    background:#ffffff;
+
+    border-radius:16px;
+
+    padding:18px;
+
+    margin:18px 0;
+
+    box-shadow:
+    0 4px 12px rgba(0,0,0,.08);
+}
+
+.card-subtitle{
+
+    text-align:center;
+
+    color:#666;
+}
+
+.card-footer{
+
+    text-align:center;
+
+    color:#999;
+
+    font-size:12px;
+}
+
+.action-area{
+    text-align: center;
+    margin-top: 20px;
+}
+
+#recipeFinished{
+    display: none;
+    text-align: center;
+    margin-top: 40px;
+}
+#nutritionFinished{
+    display: none;
+    text-align: center;
+    margin-top: 40px;
+}
+
+
+
+
+:root {
+  --bg: #fff7ec;
+  --bg-deep: #fdf3df;
+  --gold: #ffd260;
+  --gold-strong: #ffe7a8;
+  --text: #222;
+  --muted: #666;
+  --green: #6bea4f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  background: #ffffff;
+  overflow-x: hidden;
+  font-family:
+    "Microsoft YaHei",
+    "PingFang SC",
+    "Noto Sans CJK SC",
+    Arial,
+    sans-serif;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.template-screen {
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100svh;
+  overflow: hidden;
+  border-radius: 26px;
+  background:
+    radial-gradient(ellipse at 50% 34%, rgba(255, 250, 192, 0.48), transparent 45%),
+    linear-gradient(180deg, #ffffff 0%, var(--bg) 54%, var(--bg-deep) 100%);
+  isolation: isolate;
+}
+
+.template-screen::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background:
+    radial-gradient(circle at 8% 34%, rgba(255, 226, 122, 0.86) 0 1px, transparent 2px),
+    radial-gradient(circle at 81% 22%, rgba(255, 255, 255, 0.7) 0 1px, transparent 2px),
+    radial-gradient(circle at 50% 88%, rgba(255, 236, 159, 0.66) 0 1px, transparent 2px),
+    radial-gradient(circle at 22% 12%, rgba(255, 255, 255, 0.72) 0 1px, transparent 2px);
+  opacity: 0.72;
+}
+
+.top-nav {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 96px;
+  padding: 28px 56px 12px;
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  width: 174px;
+  min-width: 128px;
+}
+
+.brand-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.employee-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #444;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-shadow:none;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(107, 234, 79, 0.8), 0 0 18px rgba(107, 234, 79, 0.45);
+}
+
+.status-divider {
+  color: rgba(242, 215, 122, 0.78);
+}
+
+.home-layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(360px, 42%) minmax(0, 1fr);
+  align-items: center;
+  min-height: calc(100svh - 96px);
+  padding: 12px 72px 68px 0;
+}
+
+.animation-stage {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 1;
+  width: min(48%, 820px);
+  height: min(58svh, 660px);
+  min-height: 360px;
+  overflow: hidden;
+}
+
+.animation-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left bottom;
+  filter: saturate(1.05) contrast(1.05);
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0%, #000 18%, #000 100%),
+    linear-gradient(to left, transparent 0%, #000 32%, #000 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to bottom, transparent 0%, #000 18%, #000 100%),
+    linear-gradient(to left, transparent 0%, #000 32%, #000 100%);
+  mask-composite: intersect;
+}
+
+.interaction-panel {
+  position: relative;
+  z-index: 3;
+  grid-column: 2;
+  width: 100%;
+  max-width: 1000px;
+  min-width: 0;
+  margin-left: 32px;
+}
+
+.kicker {
+  display: flex;
+  gap: 54px;
+  margin: 0 0 22px;
+  color: var(--gold);
+  font-family:
+    "Noto Serif SC",
+    "Source Han Serif SC",
+    "Songti SC",
+    serif;
+  font-size: 1.32rem;
+  font-weight: 700;
+}
+
+
+.oracle-form {
+  display: grid;
+  gap: 30px;
+}
+
+.form-group {
+  display: grid;
+  gap: 18px;
+}
+
+.step-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gold);
+  font-size: 1.14rem;
+  font-weight: 700;
+}
+
+.step-number {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid rgba(242, 215, 122, 0.72);
+  border-radius: 50%;
+  font-size: 0.92rem;
+  line-height: 1;
+}
+
+.topic-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.topic-chip {
+  min-width: 132px;
+  min-height: 58px;
+  padding: 0 34px;
+  border: 2px solid rgba(214, 185, 112, 0.32);
+  border-radius: 999px;
+  color: var(--gold);
+  background: rgba(16, 12, 29, 0.52);
+  font-size: 1.28rem;
+  font-weight: 700;
+  white-space: normal;
+  box-shadow: inset 0 0 18px rgba(214, 185, 112, 0.06);
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.topic-chip:hover,
+.topic-chip:focus-visible,
+.topic-chip.is-active {
+  border-color: rgba(255, 233, 157, 0.88);
+  background: rgba(242, 215, 122, 0.14);
+  outline: none;
+}
+
+.topic-chip:active {
+  transform: translateY(1px);
+}
+
+.topic-chip-wide {
+  min-width: 252px;
+}
+
+.input-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+.question-input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 106px;
+  border: 2px solid rgba(214, 185, 112, 0.32);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow:
+    inset 0 0 20px rgba(255, 233, 157, 0.04),
+    0 20px 56px rgba(0, 0, 0, 0.22);
+}
+
+.question-input textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 76px;
+  padding: 24px 24px 18px 36px;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  font-size: 1.18rem;
+  line-height: 1.45;
+  resize: none;
+  outline: none;
+}
+
+.question-input textarea::placeholder {
+  color: rgba(255, 248, 232, 0.72);
+}
+
+.voice-tools {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0;
+  padding-right: 24px;
+  transition: gap 180ms ease;
+}
+
+.voice-bars {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: width 180ms ease, opacity 160ms ease, transform 180ms ease;
+}
+
+.voice-bars span {
+  display: block;
+  width: 8px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--gold);
+  animation: voicePulse 1.12s ease-in-out infinite;
+}
+
+.voice-bars span:nth-child(2) {
+  height: 44px;
+  animation-delay: 140ms;
+}
+
+.voice-bars span:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+.question-input.is-recording .voice-bars {
+  width: 40px;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.question-input.is-recording .voice-tools {
+  gap: 18px;
+}
+
+.voice-button {
+  display: inline-grid;
+  width: 74px;
+  height: 74px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #5a3814;
+  background: linear-gradient(180deg, #ffe897 0%, #e1ba58 100%);
+  box-shadow: 0 0 22px rgba(255, 233, 157, 0.28);
+  touch-action: none;
+  user-select: none;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.voice-button:active,
+.question-input.is-recording .voice-button {
+  transform: scale(0.96);
+  box-shadow: 0 0 28px rgba(255, 233, 157, 0.42);
+}
+
+.voice-button svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 0;
+}
+
+.start-button {
+  width: 100%;
+  min-height: 88px;
+  padding: 0 34px;
+  border: 0;
+  border-radius: 999px;
+  color: #1d1530;
+  background: linear-gradient(180deg, #ffeda7 0%, #e5c061 100%);
+  font-family:
+    "Noto Serif SC",
+    "Source Han Serif SC",
+    "Songti SC",
+    serif;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: normal;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.start-button:hover,
+.start-button:focus-visible {
+  filter: brightness(1.06);
+  outline: none;
+}
+
+.start-button:active {
+  transform: translateY(1px);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes voicePulse {
+  0%,
+  100% {
+    transform: scaleY(0.68);
+    opacity: 0.72;
+  }
+
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 1280px) {
+  .top-nav {
+    padding-inline: 42px;
+  }
+
+  .home-layout {
+    grid-template-columns: minmax(300px, 38%) minmax(0, 1fr);
+    padding-right: 42px;
+  }
+
+  h1 {
+    font-size: 3.85rem;
+    text-align: center;
+  }
+
+  .topic-chip {
+    min-width: 118px;
+    min-height: 54px;
+    padding-inline: 26px;
+  }
+}
+
+@media (max-width: 980px) {
+  .template-screen {
+    border-radius: 18px;
+  }
+
+  .home-layout {
+    display: block;
+    padding: 24px 28px 52px;
+  }
+
+  .animation-stage {
+    width: 100%;
+    height: 46svh;
+    min-height: 300px;
+    opacity: 0.52;
+  }
+
+  .interaction-panel {
+    width: 100%;
+    max-width: 760px;
+    margin: 42px auto 0;
+  }
+
+  .kicker {
+    gap: 28px;
+  }
+
+  h1 {
+    font-size: 3.2rem;
+    text-align: center; 
+  }
+
+  .action-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+}
+
+@media (max-width: 640px) {
+  .top-nav {
+    position: relative;
+    min-height: 78px;
+    gap: 12px;
+    padding: 20px 14px 8px;
+  }
+
+  .brand-logo {
+    width: 112px;
+    min-width: 0;
+  }
+
+  .employee-status {
+    position: absolute;
+    top: 32px;
+    right: 14px;
+    flex-shrink: 0;
+    gap: 4px;
+    font-size: 0.78rem;
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .home-layout {
+    padding: 12px 18px 34px;
+  }
+
+  .interaction-panel {
+    margin-top: 28px;
+  }
+
+  .kicker {
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    margin-bottom: 14px;
+    font-size: 1rem;
+  }
+
+  h1 {
+    margin-bottom: 28px;
+    font-size: 2.35rem;
+    text-align: center;
+  }
+
+  .oracle-form {
+    gap: 24px;
+  }
+
+  .input-title-row {
+    align-items: flex-start;
+  }
+
+  .topic-options {
+    gap: 12px;
+  }
+
+  .topic-chip,
+  .topic-chip-wide {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding-inline: 14px;
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+  }
+
+  .question-input {
+    align-items: stretch;
+    flex-direction: column;
+    border-radius: 28px;
+  }
+
+  .question-input textarea {
+    width: 100%;
+    height: 92px;
+    padding: 22px 24px 10px;
+  }
+
+  .voice-tools {
+    justify-content: space-between;
+    padding: 0 16px 16px 24px;
+  }
+
+  .question-input.is-recording .voice-bars {
+    width: 40px;
+  }
+
+  .voice-button {
+    width: 58px;
+    height: 58px;
+  }
+
+  .start-button {
+    min-height: 68px;
+    font-size: 1.16rem;
+  }
+}
+
+.voice-input-container{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin:15px 0;
+}
+
+.voice-input-container input{
+    flex:1;
+}
+
+.voice-btn{
+
+    width:58px;
+    height:58px;
+
+    border:none;
+
+    border-radius:50%;
+
+    background:#e5c061;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+    position:relative;
+
+}
+.voice-btn:hover{
+
+    transform:scale(1.08);
+
+}
+.mic-icon{
+
+    display:flex;
+
+    align-items:flex-end;
+
+    gap:3px;
+
+    height:22px;
+
+}
+
+.mic-icon span{
+
+    width:4px;
+
+    border-radius:2px;
+
+    background:white;
+
+}
+
+.mic-icon span:nth-child(1){
+
+    height:10px;
+
+}
+
+.mic-icon span:nth-child(2){
+
+    height:18px;
+
+}
+
+.mic-icon span:nth-child(3){
+
+    height:13px;
+
+}
+.voice-status{
+
+    display:none;
+
+    margin-top:12px;
+
+    text-align:center;
+
+}
+.voice-btn.recording{
+
+    animation:pulse 1.2s infinite;
+
+    background:#F44336;
+
+}
+@keyframes pulse{
+
+0%{
+
+box-shadow:0 0 0 0 rgba(244,67,54,.6);
+
+}
+
+70%{
+
+box-shadow:0 0 0 16px rgba(244,67,54,0);
+
+}
+
+100%{
+
+box-shadow:0 0 0 0 rgba(244,67,54,0);
+
+}
+
+}
+.voice-btn.recording .mic-icon{
+
+    width:16px;
+
+    height:16px;
+
+    background:white;
+
+    border-radius:2px;
+
+}
+.voice-wave{
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:flex-end;
+
+    gap:4px;
+
+    height:34px;
+
+}
+.voice-wave span{
+
+    width:5px;
+
+    background:#e5c061;
+
+    border-radius:2px;
+
+    animation:wave 1s infinite;
+
+}
+.voice-wave span:nth-child(1){
+
+animation-delay:0s;
+
+}
+
+.voice-wave span:nth-child(2){
+
+animation-delay:.2s;
+
+}
+
+.voice-wave span:nth-child(3){
+
+animation-delay:.4s;
+
+}
+
+.voice-wave span:nth-child(4){
+
+animation-delay:.6s;
+
+}
+
+.voice-wave span:nth-child(5){
+
+animation-delay:.8s;
+
+}
+@keyframes wave{
+
+0%{
+
+height:8px;
+
+}
+
+50%{
+
+height:30px;
+
+}
+
+100%{
+
+height:8px;
+
+}
+
+}
+.voice-text{
+
+    margin-top:8px;
+
+    color:#666;
+
+    font-size:15px;
+
+}
+
+.voice-btn:active{
+    transform:scale(0.95);
+}
+
+@media (max-width: 500px) {
+  .home-layout {
+    max-width: 390px;
+    margin-right: auto;
+    margin-left: 0;
+  }
+
+  .interaction-panel {
+    max-width: 354px;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .employee-status {
+    right: auto;
+    left: 300px;
+  }
+}
+
+@media (max-width: 420px) {
+  .employee-status {
+    left: calc(100vw - 110px);
+  }
+}
+
+
+#catLoading{
+    width: 150px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    transform-origin: center bottom;
+    animation: catBounce 2.5s ease-in-out infinite;
+
+}
+
+@keyframes catBounce{
+
+    /* 从更左、更高的位置掉下来 */
+    0%{
+        transform:translate(-120px,-120px) scale(0.45);
+    }
+
+    /* 第一次落地——压扁 */
+    14%{
+        transform:translate(-40px,0)
+                  scaleX(1.25)
+                  scaleY(0.75);
+    }
+
+    /* 起跳——拉长 */
+    18%{
+        transform:translate(-30px,-8px)
+                  scaleX(0.9)
+                  scaleY(1.12);
+    }
+
+    /* 第一跳最高 */
+    28%{
+        transform:translate(15px,-48px)
+                  scale(1);
+    }
+
+    /* 落地——再次压扁 */
+    38%{
+        transform:translate(60px,0)
+                  scaleX(1.18)
+                  scaleY(0.82);
+    }
+
+    /* 第二次起跳 */
+    42%{
+        transform:translate(70px,-5px)
+                  scaleX(0.93)
+                  scaleY(1.08);
+    }
+
+    /* 第二跳 */
+    52%{
+        transform:translate(105px,-28px);
+    }
+
+    /* 落地 */
+    62%{
+        transform:translate(140px,0)
+                  scaleX(1.14)
+                  scaleY(0.86);
+    }
+
+    /* 第三次起跳 */
+    66%{
+        transform:translate(148px,-3px)
+                  scaleX(0.96)
+                  scaleY(1.05);
+    }
+
+    /* 第三跳 */
+    76%{
+        transform:translate(175px,-14px);
+    }
+
+    /* 最后一次落地 */
+    88%{
+        transform:translate(205px,0)
+                  scaleX(1.10)
+                  scaleY(0.90);
+    }
+
+    /* 停顿一小会 */
+    94%{
+        transform:translate(205px,0)
+                  scale(1);
+    }
+
+    /* 回到起点重新开始 */
+    100%{
+        transform:translate(-120px,-120px)
+                  scale(0.45);
+    }
+}
+
+
+
+</style>
+</head>
+<body>
+    <div class="template-screen template-a">
+      <header class="top-nav">
+        <a class="brand-logo" href="#" aria-label="公司首页">
+          <img src="/static/logo_black.svg" alt="公司 Logo" />
+        </a>
+        <div class="employee-status" aria-label="数字员工状态">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span class="employee-name">厨神曦</span>
+          <span class="status-divider" aria-hidden="true">·</span>
+          <span class="status-text">在线</span>
+        </div>
+      </header>
+
+      <main class="home-layout">
+        <section class="animation-stage" aria-hidden="true">
+          <video
+            class="animation-video"
+            src="/static/animation_template_A.mp4"
+            autoplay
+            muted
+            loop
+            playsinline
+          ></video>
+        </section>
+
+        <section class="interaction-panel" aria-labelledby="page-title">
+          <p class="kicker">
+            <span>沐曦AI厨师</span>
+            <span>厨神曦</span>
+          </p>
+          <h1 id="page-title">今天吃什么喵？🐱<br /></h1>
+          <div id="page0" class="page active welcome-page">
+<h2>欢迎使用厨神曦饮食助手！</h2>
+<p>点击“开始”，进入饮食偏好采集。</p>
+<button onclick="startExperience()">开始</button>
+</div>
+
+<div id="page1" class="page">
+<h2>请问您的偏好口味是？</h2>
+<label class="option"><input type="radio" name="taste" value="清淡"> 清淡</label>
+<label class="option"><input type="radio" name="taste" value="麻辣"> 麻辣</label>
+<label class="option"><input type="radio" name="taste" value="适中"> 适中</label>
+<button onclick="nextPage(2)">下一步</button>
+</div>
+
+
+<div id="page2" class="page">
+<h2>请问您有忌口吗？</h2>
+
+<div class="voice-input-container">
+    <input type="text" id="avoid" placeholder="请输入忌口内容，例如：香菜，大蒜，葱">
+
+<button
+    type="button"
+    class="voice-btn"
+    onclick="startVoiceInput('avoid')"
+    title="语音输入">
+
+    <span class="mic-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+    </span>
+
+</button>
+
+<div class="voice-status" id="voiceStatusAvoid">
+    <div class="voice-wave">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <div class="voice-text">
+        正在聆听...
+    </div>
+
+</div>
+</div>
+
+<div class="tip-text">💡 如果没有忌口，请直接点击下一步</div>
+
+<button onclick="nextPage(3)">下一步</button>
+</div>
+
+
+<div id="page3" class="page">
+<h2>请问您有过敏原吗？</h2>
+
+<div class="voice-input-container">
+    <input type="text" id="allergy" placeholder="请输入过敏原，例如：花生，芒果，柠檬">
+
+<button
+    type="button"
+    class="voice-btn"
+    onclick="startVoiceInput('allergy')"
+    title="语音输入">
+
+    <span class="mic-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+    </span>
+
+</button>
+
+<div class="voice-status" id="voiceStatusAllergy">
+    <div class="voice-wave">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <div class="voice-text">
+        正在聆听...
+    </div>
+
+</div>
+</div>
+
+<div class="tip-text">💡 如果没有过敏原，请直接点击下一步</div>
+
+<button onclick="nextPage(4)">下一步</button>
+</div>
+
+<div id="page4" class="page">
+<h2>请问您有什么健康目标吗？</h2>
+<label class="option"><input type="radio" name="goal" value="减肥"> 减肥</label>
+<label class="option"><input type="radio" name="goal" value="增肌"> 增肌</label>
+<label class="option"><input type="radio" name="goal" value="养身"> 养身</label>
+<button onclick="generateRecipe()">生成食谱</button>
+</div>
+
+<div id="page5" class="page">
+
+    <div id="recipeLoading">
+           <!-- <div class="cat-animation"></div-->
+            <img
+                id="catLoading"
+                src="/static/xixiemoji.png">
+            <br />
+            <p>
+
+                🐾 曦曦正在思考今日专属食谱...
+            </p>
+    </div>
+
+<div 
+    id="recipeResult" 
+    class="result-box"
+    style="display:none;">
+</div>
+<div id="recipeFinished">
+<h2>🍽️ 食谱推荐</h2>
+<h3>⭐菜谱生成啦！</h3>
+<p>请看展示屏！</p>
+</div>
+<button id="nextBtn"
+    onclick="goNutrition()"
+    style="display:none;">
+    进行营养分析
+    </button>
+</div>
+
+<div id="page6" class="page">
+<div id="nutritionLoading">
+    <br />
+        <img
+            id="catLoading"
+            src="/static/xixiemoji2.png">
+    <p>
+
+        🐾 曦曦正在分析营养成分...
+    </p>
+</div>
+<div id="nutritionResult" 
+    style="display:none;">
+    <div id="nutritionChart"></div>
+    <div id="nutritionCompareChart"></div>
+    <div id="nutritionText" class="result-box">
+    </div>
+</div>
+
+<div id="nutritionFinished">
+<h2>🥗 营养分析</h2>
+<h3>⭐营养分析完成啦！</h3>
+<p>请看展示屏！</p>
+</div>
+
+<!--带走按钮-->
+<div class="action-area">        
+    <button            
+        id="saveCardBtn">       
+        👜带走
+    </button>
+</div>
+
+</div>
+
+
+        </section>
+      </main>
+    </div>
+
+<script>
+let recipeText='';
+let nutritionText='';
+
+
+async function startExperience(){
+    // 重置
+    await fetch('/api/reset',{
+        method:'POST'
+    });
+
+
+    nextPage(1);
+}
+/*
+function nextPage(n){
+ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+ document.getElementById('page'+n).classList.add('active');
+}
+ */
+function nextPage(n){
+
+    document.querySelectorAll('.page')
+        .forEach(p=>p.classList.remove('active'));
+
+    const page = document.getElementById('page'+n);
+
+    page.classList.add('active');
+
+    page.animate(
+        [
+            {
+                opacity:0,
+                transform:'translateX(50px)'
+            },
+            {
+                opacity:1,
+                transform:'translateX(0)'
+            }
+        ],
+        {
+            duration:400,
+            easing:'ease-out'
+        }
+    );
+}
+
+async function generateRecipe(){
+
+    const taste =
+        document.querySelector(
+            'input[name="taste"]:checked'
+        )?.value || '';
+
+    const avoid =
+        document.getElementById(
+            'avoid'
+        ).value || '无';
+
+    const allergy =
+        document.getElementById(
+            'allergy'
+        ).value || '无';
+
+    const goal =
+        document.querySelector(
+            'input[name="goal"]:checked'
+        )?.value || '';
+
+    const prompt =
+        `偏好口味:${taste}；忌口:${avoid}；过敏原:${allergy}；健康目标:${goal}。请先生成食谱推荐，并单独给出营养分析。`;
+
+    // 立即进入加载页
+    await fetch(
+        '/api/set_display_state',
+        {
+            method:'POST',
+            headers:{
+                'Content-Type':'application/json'
+            },
+            body:JSON.stringify({
+                state:'recipe_loading'
+            })
+        },
+        console.log("A屏发送状态：recipe_loading")
+    );
+    nextPage(5);
+
+    document.getElementById(
+        'recipeLoading'
+    ).style.display = 'block';
+
+    document.getElementById(
+        'recipeResult'
+    ).style.display = 'none';
+
+    document.getElementById(
+        'nextBtn'
+    ).style.display = 'none';
+
+    try{
+
+        const response =
+            await fetch(
+                '/api/chat',
+                {
+                    method:'POST',
+                    headers:{
+                        'Content-Type':'application/json'
+                    },
+                    body:JSON.stringify({
+                        message:prompt
+                    })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        const txt =
+            data.response || '';
+
+        console.log('data response：');
+        console.log(txt);
+
+        const parts =
+            txt.split(/营养分析[:：]/);
+
+        recipeText =
+            parts[0] || txt;
+
+        nutritionText =
+            parts.length > 1
+                ? ('营养分析：'+parts[1])
+                : '未检测到营养分析内容';
+
+        // 隐藏视频
+        document.getElementById(
+            'recipeLoading'
+        ).style.display = 'none';
+
+
+        await fetch(
+            '/api/set_display_state',
+            {
+                method:'POST',
+                headers:{
+                    'Content-Type':'application/json'
+                },
+                body:JSON.stringify({
+                    state:'recipe_result',
+                    data:{
+                        recipe:recipeText
+                    }
+                })
+            }
+        );
+        // 显示结果
+        document.getElementById(
+            'recipeResult'
+        ).style.display = 'none';
+        document.getElementById(
+            'recipeFinished'
+        ).style.display = 'block';
+
+        document.getElementById(
+            'nextBtn'
+        ).style.display = 'inline-block';
+
+        document.getElementById(
+            'recipeResult'
+        ).innerHTML =
+            marked.parse(recipeText);
+
+
+
+    }
+    catch(e){
+
+        document.getElementById(
+            'recipeLoading'
+        ).style.display = 'none';
+
+        document.getElementById(
+            'recipeResult'
+        ).style.display = 'none';
+
+        document.getElementById(
+            'recipeResult'
+        ).innerHTML =
+            '生成失败';
+    }
+}
+
+async function loadNutrition(){
+
+    try{
+
+        const loading =
+            document.getElementById(
+                'nutritionLoading'
+            );
+
+        const result =
+            document.getElementById(
+                'nutritionResult'
+            );
+
+        // 显示动画
+        loading.style.display = 'block';
+
+        // 隐藏结果
+        result.style.display = 'none';
+
+        // 隐藏按钮
+        document.getElementById(
+            "saveCardBtn"
+        ).style.display="none";
+
+        const response = await fetch(
+            '/api/nutrition',
+            {
+                method:'POST'
+            }
+        );
+
+        const data = await response.json();
+        console.log(data.nutrition);
+
+
+        await fetch(
+            '/api/set_display_state',
+            {
+                method:'POST',
+                headers:{
+                    'Content-Type':'application/json'
+                },
+                body:JSON.stringify({
+                    state:'nutrition_result',
+                    data:{
+                        nutrition:data.nutrition
+                    }
+                })
+            }
+        );
+        // 隐藏动画
+        loading.style.display = 'none';
+
+        // 显示结果
+        result.style.display = 'none';
+        document.getElementById(
+            'nutritionFinished'
+        ).style.display = 'block';
+
+        // 显示按钮
+        document.getElementById(
+            "saveCardBtn"
+        ).style.display="inline-block";
+
+        document.getElementById(
+            'nutritionText'//////////////////////////////
+        ).innerHTML =
+            marked.parse(
+                data.nutrition || '暂无数据'
+            );
+        //renderNutritionChart(35,18,60,12,620);
+        
+        const nutrition =
+             extractNutrition(
+             data.nutrition || ''
+        );
+        console.log(nutrition);
+
+        renderNutritionChart(
+            nutrition.protein,
+            nutrition.fat,
+            nutrition.carb,
+            nutrition.fiber,
+            nutrition.kcal
+        );
+        renderNutritionCompareChart(
+            nutrition.protein,
+            nutrition.fat,
+            nutrition.carb,
+            nutrition.fiber,
+            nutrition.kcal
+        );
+
+    }catch(e){
+
+        document.getElementById(
+            'nutritionLoading'
+        ).style.display = 'none';
+
+        document.getElementById(
+            'nutritionResult'
+        ).style.display = 'block';
+        document.getElementById(
+            "saveCardBtn"
+        ).style.display="inline-block";
+
+        document.getElementById(
+            'nutritionResult'
+        ).innerHTML =
+            '营养分析生成失败';
+
+    }
+}
+async function goNutrition(){
+
+    await fetch(
+        '/api/set_display_state',
+        {
+            method:'POST',
+            headers:{
+                'Content-Type':'application/json'
+            },
+            body:JSON.stringify({
+                state:'nutrition_loading'
+            })
+        }
+    );
+    nextPage(6);
+    await loadNutrition();
+}
+
+function renderNutritionChart(
+    protein,
+    fat,
+    carb,
+    fiber,
+    kcal
+){
+
+    const chart =
+        echarts.init(
+            document.getElementById(
+                'nutritionChart'
+            )
+        );
+
+    const option = {
+
+        color:[
+            '#7BC96F',
+            '#F6C453',
+            '#FF8A65',
+            '#64B5F6'
+        ],
+
+        tooltip:{
+            trigger:'item',
+            formatter:
+                '{b}<br>{c}g ({d}%)'
+        },
+
+        title:{
+            text:
+                kcal + '\nkcal',
+
+            left:'center',
+            top:'42%',
+
+            textStyle:{
+                fontSize:24,
+                fontWeight:'bold'
+            }
+        },
+
+        legend:{
+            bottom:10,
+            selectedMode:false,
+            show:false
+        },
+
+        series:[
+            {
+                type:'pie',
+
+                radius:[
+                    '55%',
+                    '75%'
+                ],
+
+                itemStyle:{
+                    borderRadius:10,
+                    borderColor:'#fff',
+                    borderWidth:4
+                },
+
+                label:{
+                    formatter:
+                        '{b}\n{d}%'
+                },
+
+                data:[
+                    {
+                        value:protein,
+                        name:'蛋白质'
+                    },
+                    {
+                        value:fat,
+                        name:'脂肪'
+                    },
+                    {
+                        value:carb,
+                        name:'碳水'
+                    },
+                    {
+                        value:fiber,
+                        name:'膳食纤维'
+                    }
+                ]
+            }
+        ]
+    };
+
+    chart.setOption(option);
+
+    window.addEventListener(
+        'resize',
+        ()=>chart.resize()
+    );
+}
+
+function renderNutritionCompareChart(
+    protein,
+    fat,
+    carb,
+    fiber
+){
+
+    const chart = echarts.init(
+        document.getElementById(
+            'nutritionCompareChart'
+        )
+    );
+
+    const currentData = [
+        protein,
+        fat,
+        carb,
+        fiber
+    ];
+
+    const recommendData = [
+        25,
+        20,
+        75,
+        10
+    ];
+
+    const names = [
+        '蛋白质',
+        '脂肪',
+        '碳水',
+        '膳食纤维'
+    ];
+
+    const option = {
+
+        title:{
+            text:'当前菜谱与推荐摄入对比',
+            left:'center'
+        },
+
+        tooltip:{
+
+            trigger:'axis',
+
+            axisPointer:{
+                type:'shadow'
+            },
+
+            formatter:function(params){
+
+                const index =
+                    params[0].dataIndex;
+
+                const current =
+                    currentData[index];
+
+                const recommend =
+                    recommendData[index];
+
+                const diff =
+                    current - recommend;
+
+                return `
+                    <b>${names[index]}</b><br/>
+                    当前菜谱：${current.toFixed(1)}g<br/>
+                    推荐摄入：${recommend.toFixed(1)}g<br/>
+                    差值：${diff>0?'+':''}${diff.toFixed(1)}g
+                `;
+            }
+        },
+
+        legend:{
+            bottom:10,
+            selectedMode:false
+        },
+
+        xAxis:{
+            type:'category',
+            data:names
+        },
+
+        yAxis:{
+            type:'value',
+            name:'克(g)'
+        },
+
+        series:[
+            {
+                name:'当前菜谱',
+                type:'bar',
+                data:currentData
+            },
+            {
+                name:'推荐摄入',
+                type:'bar',
+                data:recommendData
+            }
+        ]
+    };
+
+    chart.setOption(option);
+
+    window.addEventListener(
+        'resize',
+        ()=>chart.resize()
+    );
+}
+
+function extractNutrition(text){
+
+    const nutritionPart =
+        text.split("### ⭐")[0];
+
+    console.log("营养区块：");
+    console.log(nutritionPart);
+
+    console.log("原始营养分析：");
+    console.log(text);
+
+    return {
+
+        kcal:Number(
+    nutritionPart.match(/热量.*?(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/"calories"\s*:\s*(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/calories.*?(\d+(?:\.\d+)?)/i)?.[1]
+    ||
+    0
+),
+protein:Number(
+    nutritionPart.match(/蛋白质.*?(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/"protein"\s*:\s*(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/protein.*?(\d+(?:\.\d+)?)/i)?.[1]
+    ||
+    0
+),
+carb:Number(
+    nutritionPart.match(/碳水化合物.*?(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/"carbs"\s*:\s*(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/carbs.*?(\d+(?:\.\d+)?)/i)?.[1]
+    ||
+    0
+),
+fat:Number(
+    nutritionPart.match(/脂肪.*?(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/"fat"\s*:\s*(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/fat.*?(\d+(?:\.\d+)?)/i)?.[1]
+    ||
+    0
+),
+fiber:Number(
+    nutritionPart.match(/膳食纤维.*?(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/"fiber"\s*:\s*(\d+(?:\.\d+)?)/)?.[1]
+    ||
+    nutritionPart.match(/fiber.*?(\d+(?:\.\d+)?)/i)?.[1]
+    ||
+    0
+)
+    };
+
+}
+
+/*Matter.js 蔬菜重力系统*/
+// 所有蔬菜物理体
+let veggieBodies = [];
+
+// Matter引擎
+let engine;
+
+// Matter世界
+let world;
+
+/*页面加载完成后启动*/
+window.addEventListener("load", () => {
+
+    initVeggieWorld();
+
+});
+
+
+/*初始化蔬菜世界*/
+function initVeggieWorld(){
+
+    // Matter模块
+    const Engine = Matter.Engine;
+    const Render = Matter.Render;
+    const Runner = Matter.Runner;
+    const Bodies = Matter.Bodies;
+    const Composite = Matter.Composite;
+
+    // 创建引擎
+    engine = Engine.create();
+
+    world = engine.world;
+
+    // 创建渲染器
+    const render = Render.create({
+
+        element: document.getElementById("veggie-world"),
+
+        engine: engine,
+
+        options: {
+            width: window.innerWidth,
+            height: 220,
+            wireframes: false,
+            background: "transparent"
+        }
+    });
+
+    // 启动渲染
+    Render.run(render);
+
+    // 启动物理计算
+    const runner = Runner.create();
+
+    Runner.run(runner, engine);
+
+    /*创建地板*/
+    const ground = Bodies.rectangle(
+        window.innerWidth / 2,
+        223,
+        window.innerWidth,
+        40,
+        {
+            isStatic: true
+        }
+    );
+
+    Composite.add(world, ground);
+
+    /*创建左右墙壁*/
+    const leftWall = Bodies.rectangle(
+        -20,
+        110,
+        40,
+        220,
+        {
+            isStatic: true
+        }
+    );
+
+    const rightWall = Bodies.rectangle(
+        window.innerWidth + 20,
+        110,
+        40,
+        220,
+        {
+            isStatic: true
+        }
+    );
+
+    Composite.add(world, [leftWall, rightWall]);
+
+    /*蔬菜种类*/
+    const veggies = [
+        "🥕",
+        "🥦",
+        "🍅",
+        "🥔",
+        "🥑",
+        "🥬",
+        "🧅",
+        "🍆",
+        "🍐",
+        "🍠",
+        "🍋",
+        "🍊",
+        "🍇",
+        "🍈",
+        "🍉", 
+        "🧀",
+        "🥥",
+        "🥝",
+        "🌶️",
+        "🦐",
+        "🍗",
+        "🥩",
+        "🥚",
+        "🥖",
+        "🥯"
+    ];
+
+    /*生成35个蔬菜*/
+    for(let i=0;i<35;i++){
+
+        const emoji =
+            veggies[
+                Math.floor(
+                    Math.random()*veggies.length
+                )
+            ];
+
+        createVeggie(emoji);
+    }
+
+    /*摇一摇按钮*/
+    document
+        .getElementById("shakeBtn")
+        .addEventListener("click", shakeVeggies);
+}
+
+
+/*创建一个蔬菜*/
+function createVeggie(emoji){
+
+    const Bodies = Matter.Bodies;
+    const Composite = Matter.Composite;
+
+    // 创建DOM
+    const div = document.createElement("div");
+
+    div.className = "veggie";
+
+    div.innerHTML = emoji;
+
+    document
+        .getElementById("veggie-world")
+        .appendChild(div);
+
+    // 创建物理体
+    const body = Bodies.circle(
+
+        Math.random() * window.innerWidth,
+
+        -100 - Math.random() * 500,
+
+        35,
+
+        {
+            restitution: 0.7,
+            friction: 0.05,
+
+            render: {
+                fillStyle: "transparent",
+                strokeStyle: "transparent",
+                lineWidth: 0
+            }
+        }
+    );
+
+    // 添加到世界
+    Composite.add(world, body);
+
+    // 保存
+    veggieBodies.push({
+        body: body,
+        element: div
+    });
+
+    /*每一帧同步位置*/
+    Matter.Events.on(
+        engine,
+        "afterUpdate",
+        () => {
+
+            div.style.left =
+                (body.position.x - 18) + "px";
+
+            div.style.top =
+                (body.position.y - 18) + "px";
+
+            div.style.transform =
+                `rotate(${body.angle}rad)`;
+        }
+    );
+}
+
+
+/* 摇一摇*/
+function shakeVeggies(){
+
+    veggieBodies.forEach(item => {
+
+        Matter.Body.applyForce(
+
+            item.body,
+
+            item.body.position,
+
+            {
+                x:(Math.random()-0.5)*0.05,
+                y:-0.08
+            }
+        );
+
+    });
+
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const btn = document.getElementById("saveCardBtn");
+
+    if (!btn) return;
+
+    btn.addEventListener("click", async () => {
+
+        // 1. 生成卡片内容
+        generateShareCard();
+
+        // 2. 等 DOM 更新 + echarts渲染
+        await new Promise(r => setTimeout(r, 500));
+
+        // 3. 截图
+        const canvas = await html2canvas(
+            document.getElementById("shareCard"),
+            {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: "#ffffff"
+            }
+        );
+
+        const imgUrl = canvas.toDataURL("image/png");
+
+        // 4. QR容器
+        const qrBox = document.getElementById("qrcode");
+
+        if (!qrBox) {
+            console.error("❌ 缺少 #qrcode 容器（HTML里要加）");
+            return;
+        }
+
+        qrBox.innerHTML = "";
+
+        // 5. 安全检查 QRCode 是否存在
+        if (typeof QRCode === "undefined") {
+            console.error("❌ QRCode库未加载，请检查 /static/qrcode.min.js");
+            return;
+        }
+
+        // 6. 生成二维码
+        new QRCode(qrBox, {
+            text: imgUrl,
+            width: 180,
+            height: 180
+        });
+
+    });
+
+});
+
+
+/*导出分享卡片*/
+async function generateShareCard(){
+
+    /*复制食谱内容*/
+    document.getElementById("cardRecipe").innerHTML =
+        document.getElementById("recipeResult").innerHTML;
+
+    /*复制营养文字*/
+    document.getElementById("cardNutritionText").innerHTML =
+        document.getElementById("nutritionText").innerHTML;
+
+
+    /*========================
+      导出第一个 ECharts 图
+    ========================*/
+    const nutritionChart =
+        echarts.getInstanceByDom(
+            document.getElementById("nutritionChart")
+        );
+
+    if(nutritionChart){
+
+        const oldWidth = nutritionChart.getWidth();
+        const oldHeight = nutritionChart.getHeight();
+
+        nutritionChart.resize({
+            width:520,
+            height:300
+        });
+
+        const img = nutritionChart.getDataURL({
+            type:"png",
+            pixelRatio:2,
+            backgroundColor:"#ffffff"
+        });
+
+        nutritionChart.resize({
+            width:oldWidth,
+            height:oldHeight
+        });
+
+        document.getElementById("cardNutritionChart").innerHTML=
+        `
+        <img
+            src="${img}"
+            style="
+                width:100%;
+                height:auto;
+                display:block;
+                margin-top:15px;
+            ">
+        `;
+    }
+
+
+    /*========================
+      导出第二个 ECharts 图
+    ========================*/
+    const compareChart =
+        echarts.getInstanceByDom(
+            document.getElementById("nutritionCompareChart")
+        );
+
+    if(compareChart){
+
+        const oldWidth = compareChart.getWidth();
+        const oldHeight = compareChart.getHeight();
+
+        compareChart.resize({
+            width:520,
+            height:300
+        });
+
+        const img = compareChart.getDataURL({
+            type:"png",
+            pixelRatio:2,
+            backgroundColor:"#ffffff"
+        });
+
+        compareChart.resize({
+            width:oldWidth,
+            height:oldHeight
+        });
+
+        document.getElementById("cardNutritionCompareChart").innerHTML =
+        `
+        <img
+            src="${img}"
+            style="
+                display:block;
+                width:100%;
+                height:auto;
+                object-fit:contain;
+                margin-top:15px;
+            ">
+        `;
+    }
+
+
+    /*========================
+      生成分享卡 PNG
+    ========================*/
+
+    const canvas = await html2canvas(
+        document.getElementById("shareCard"),
+        {
+            scale:2,
+            backgroundColor:"#ffffff",
+            useCORS:true
+        }
+    );
+
+    const imgBase64 = canvas.toDataURL("image/png");
+
+    /* 上传图片 */
+    const res = await fetch(
+        "/api/upload_card",
+        {
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                image:imgBase64
+            })
+        }
+    );
+
+    const data = await res.json();
+
+    console.log("图片URL：", data.url);
+
+    /* 通知display生成二维码 */
+    await fetch(
+        "/api/set_display_state",
+        {
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                state:"show_qrcode",
+                data:{
+                    url:data.url
+                }
+            })
+        }
+    );
+
+    console.log("二维码状态已发送");
+}
+
+
+
+
+
+const questionInput = document.querySelector(".question-input");
+const topicButtons = document.querySelectorAll(".topic-chip");
+const oracleForm = document.querySelector(".oracle-form");
+const voiceButton = document.querySelector("[data-voice-button]");
+
+let voicePressTimer = 0;
+let isRecording = false;
+
+const dispatchVoiceEvent = (type) => {
+  voiceButton?.dispatchEvent(
+    new CustomEvent(type, {
+      bubbles: true,
+      detail: {
+        question: oracleForm?.elements.question?.value || "",
+      },
+    }),
+  );
+};
+
+const startVoiceRecording = () => {
+  if (isRecording) return;
+
+  isRecording = true;
+  questionInput?.classList.add("is-recording");
+  voiceButton?.setAttribute("aria-pressed", "true");
+  dispatchVoiceEvent("voice:record-start");
+};
+
+const stopVoiceRecording = () => {
+  window.clearTimeout(voicePressTimer);
+  voicePressTimer = 0;
+
+  if (!isRecording) return;
+
+  isRecording = false;
+  questionInput?.classList.remove("is-recording");
+  voiceButton?.setAttribute("aria-pressed", "false");
+  dispatchVoiceEvent("voice:record-end");
+};
+
+voiceButton?.setAttribute("aria-pressed", "false");
+
+voiceButton?.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0) return;
+
+  event.preventDefault();
+  voiceButton.setPointerCapture?.(event.pointerId);
+  window.clearTimeout(voicePressTimer);
+  voicePressTimer = window.setTimeout(startVoiceRecording, 360);
+});
+
+voiceButton?.addEventListener("pointerup", stopVoiceRecording);
+voiceButton?.addEventListener("pointercancel", stopVoiceRecording);
+voiceButton?.addEventListener("lostpointercapture", stopVoiceRecording);
+voiceButton?.addEventListener("contextmenu", (event) => event.preventDefault());
+
+voiceButton?.addEventListener("keydown", (event) => {
+  if (event.key !== " " && event.key !== "Enter") return;
+  if (voicePressTimer || isRecording) return;
+
+  voicePressTimer = window.setTimeout(startVoiceRecording, 360);
+});
+
+voiceButton?.addEventListener("keyup", (event) => {
+  if (event.key === " " || event.key === "Enter") {
+    stopVoiceRecording();
+  }
+});
+
+topicButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    topicButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+  });
+});
+
+oracleForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  oracleForm.dispatchEvent(
+    new CustomEvent("oracle:start", {
+      bubbles: true,
+      detail: {
+        topic: document.querySelector(".topic-chip.is-active")?.textContent?.trim() || "",
+        question: oracleForm.elements.question?.value || "",
+      },
+    }),
+  );
+});
+
+
+
+async function startVoiceInput(inputId){
+
+    var voiceAgent = DX.getVoiceAgent();
+
+    if(!voiceAgent.isSupported()){
+
+        alert("当前浏览器不支持语音输入");
+
+        return;
+
+    }
+
+    const button=event.currentTarget;
+
+    let status;
+
+    if(inputId==="avoid")
+
+        status=document.getElementById("voiceStatusAvoid");
+
+    else
+
+        status=document.getElementById("voiceStatusAllergy");
+
+    button.classList.add("recording");
+
+    status.style.display="block";
+
+    try{
+
+        const text=await voiceAgent.start();
+
+        document.getElementById(inputId).value=text;
+
+    }catch(err){
+
+        console.log(err);
+
+    }
+
+    button.classList.remove("recording");
+
+    status.style.display="none";
+
+
+}
+
+
+
+
+
+</script>
+
+<div id="veggie-world"></div>
+<div class="shake-wrapper">
+    <button id="shakeBtn">🐾</button>
+    <span class="shake-tip">让曦曦来翻动食材吧！🐱</span>
+</div>
+
+<!--分享卡片（隐藏）-->
+<div id="shareCard">
+
+    <h2>🐱 厨神曦饮食助手</h2>
+
+    <p class="card-subtitle">
+        今日专属健康食谱
+    </p >
+
+    <hr>
+
+    <h3>🍽 推荐食谱</h3>
+    <div class="section-card">
+    <div id="cardRecipe">
+    </div>
+    </div>
+
+    <hr>
+
+    <h3>🥗 营养分析</h3>
+    <div class="section-card">
+    <div id="cardNutritionText">
+    </div>
+    </div>
+
+    <div id="cardNutritionChart">
+    </div>
+    <div id="cardNutritionCompareChart">
+    </div>
+    <hr>
+
+    <p class="card-footer">
+        Generated by MetaX
+    </p >
+
+</div>
+
+</body>
+</html>
