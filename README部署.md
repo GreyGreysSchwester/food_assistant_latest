@@ -7,9 +7,9 @@
 pip install -r requirements.txt
 ```
 ### STEP 2:
-配置环境变量：
+配置环境变量（内容写入项目根目录的 `.env` 文件，切勿提交）：
 ```bash
-API_KEY=1NJHGJ7C6C3DL4HKVFQQ655TX0ARTHRUYGTW1TWQ
+API_KEY=your_gitee_ai_api_key_here
 BASE_URL=https://ai.gitee.com/v1
 ```
 ### STEP 3:
